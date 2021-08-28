@@ -56,7 +56,7 @@ def dividend_adjusted_history(ticker_name):
     return hist
 
 
-start = "2014-06-01"
+start = "1980-06-01"
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"]
 auto_adjustA = yf.Ticker("AAPL").history(start=start)["Close"]
 auto_adjustB = yf.Ticker("ACN").history(start=start)["Close"]
@@ -81,20 +81,23 @@ def exp_reg_curve(input_series):
 
     return pd.Series(data=exp_func(np.array(range(len(input_series.index)))), index=input_series.index)
 
-reg_A = exp_reg_curve(auto_adjustA)
-reg_B = exp_reg_curve(auto_adjustB)
+def dev_curve_from_exp_norm(input_series):
+    reg_input_series = exp_reg_curve(input_series)
+    dev_input_series_from_exp_norm = (input_series - reg_input_series) / reg_input_series
+    return dev_input_series_from_exp_norm
 
-print(reg_A)
+
 
 fig, ax = plt.subplots()
 ax.plot(auto_adjustA)
 ax.plot(auto_adjustB)
-ax.plot(reg_A)
-ax.plot(reg_B)
+ax.plot(exp_reg_curve(auto_adjustA))
+ax.plot(exp_reg_curve(auto_adjustB))
 
 
 ax.set(xlabel='Date', ylabel='Index',
        title='Stock Market Overview')
 ax.grid()
 
+plt.yscale('log')
 plt.show()
