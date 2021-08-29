@@ -56,10 +56,12 @@ def dividend_adjusted_history(ticker_name):
     return hist
 
 
-start = "2000-01-01"
+start = "1980-01-01"
+A_ticker = "VOLV-B.ST"
+B_ticker = "TELIA.ST"
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
-auto_adjustA = yf.Ticker("VOLV-B.ST").history(start=start)["Close"].fillna(method="ffill")
-auto_adjustB = yf.Ticker("KAPIAB.ST").history(start=start)["Close"].fillna(method="ffill")
+auto_adjustA = yf.Ticker(A_ticker).history(start=start)["Close"].fillna(method="ffill")
+auto_adjustB = yf.Ticker(B_ticker).history(start=start)["Close"].fillna(method="ffill")
 raw_A = auto_adjustA
 
 # Normalize so that all start at 1
@@ -114,13 +116,11 @@ print(get_exp_cagr_and_vol(auto_adjustB)[1])
 
 
 fig, ax = plt.subplots()
-ax.plot(auto_adjustA, label="Asset_A")
-ax.plot(auto_adjustB, label="Asset_B")
+ax.plot(auto_adjustA, label=A_ticker)
+ax.plot(auto_adjustB, label=B_ticker)
 ax.plot(GSPC, label="GSPC")
 ax.plot(exp_reg_curve(auto_adjustA))
 ax.plot(exp_reg_curve(auto_adjustB))
-ax.plot(dev_curve_from_exp_normd(auto_adjustA))
-ax.plot(dev_curve_from_exp_normd(auto_adjustB))
 ax.legend()
 
 ax.set(xlabel='Date', ylabel='Index',
