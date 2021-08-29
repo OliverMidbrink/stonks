@@ -56,21 +56,19 @@ def dividend_adjusted_history(ticker_name):
     return hist
 
 
-start = "1980-06-01"
-GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"]
-auto_adjustA = yf.Ticker("AAPL").history(start=start)["Close"]
-auto_adjustB = yf.Ticker("ACN").history(start=start)["Close"]
-print(GSPC)
+start = "2000-01-01"
+GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
+auto_adjustA = yf.Ticker("VOLV-B.ST").history(start=start)["Close"].fillna(method="ffill")
+auto_adjustB = yf.Ticker("KAPIAB.ST").history(start=start)["Close"].fillna(method="ffill")
+raw_A = auto_adjustA
 
-
-# Normalize so that both start at 1
+# Normalize so that all start at 1
 auto_adjustA /= float(auto_adjustA[:1])
 auto_adjustB /= float(auto_adjustB[:1])
 GSPC /= float(GSPC[:1])
 
-print(auto_adjustA.std())
-print(auto_adjustB.std())
 
+# Takes in normalized time series that starts with 1
 # regression with exponential curve
 def exp_reg_curve(input_series):
     reg_vals = np.polyfit(range(len(input_series.index)), np.log(input_series), 1, w=np.sqrt(input_series))
@@ -81,23 +79,53 @@ def exp_reg_curve(input_series):
 
     return pd.Series(data=exp_func(np.array(range(len(input_series.index)))), index=input_series.index)
 
-def dev_curve_from_exp_norm(input_series):
+# Calculates deviation from exponential regression model and normalizes by dividing each deviation by the exp_model_value
+# Takes in normalized time series that starts with 1
+def dev_curve_from_exp_normd(input_series):
     reg_input_series = exp_reg_curve(input_series)
     dev_input_series_from_exp_norm = (input_series - reg_input_series) / reg_input_series
     return dev_input_series_from_exp_norm
 
 
+# Get CAGR of exp-model and a volatility measure from a time series
+def get_exp_cagr_and_vol(input_series):
+    # Do exp regression on input_series
+    reg_vals = np.polyfit(range(len(input_series.index)), np.log(input_series), 1, w=np.sqrt(input_series))
+
+    # get growth rate from exp model
+    cagr = np.exp(reg_vals[0]) ** 253
+
+    # get volatility compared to market volatility (S&P500) during the period of the input_series
+    market_series = yf.Ticker("^GSPC").history(start=input_series.index[0], end=input_series.index[-1])["Close"].fillna(method="ffill")
+    market_series /= float(market_series[:1])
+
+    market_std = dev_curve_from_exp_normd(market_series).std()
+    volatility = dev_curve_from_exp_normd(input_series).std() / market_std
+
+    return [cagr, volatility]
+
+# print some data about the assets
+print("CAGR")
+print(get_exp_cagr_and_vol(auto_adjustA)[0])
+print(get_exp_cagr_and_vol(auto_adjustB)[0])
+print("VOLATILITY")
+print(get_exp_cagr_and_vol(auto_adjustA)[1])
+print(get_exp_cagr_and_vol(auto_adjustB)[1])
+
 
 fig, ax = plt.subplots()
-ax.plot(auto_adjustA)
-ax.plot(auto_adjustB)
+ax.plot(auto_adjustA, label="Asset_A")
+ax.plot(auto_adjustB, label="Asset_B")
+ax.plot(GSPC, label="GSPC")
 ax.plot(exp_reg_curve(auto_adjustA))
 ax.plot(exp_reg_curve(auto_adjustB))
-
+ax.plot(dev_curve_from_exp_normd(auto_adjustA))
+ax.plot(dev_curve_from_exp_normd(auto_adjustB))
+ax.legend()
 
 ax.set(xlabel='Date', ylabel='Index',
        title='Stock Market Overview')
 ax.grid()
 
-plt.yscale('log')
+#plt.yscale('log')
 plt.show()
