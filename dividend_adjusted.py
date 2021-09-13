@@ -72,7 +72,7 @@ assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
 
 # Returns the environment, social and governance score, like on yahoo finance
-def get_esg(ticker):
+def get_esg_risk(ticker):
     data_points = ["environmentScore", "socialScore", "governanceScore"]
     data = ticker.sustainability
     try:
@@ -81,15 +81,15 @@ def get_esg(ticker):
         #print('Could not get ESG score for ' + ticker.ticker)
         return None
 
-def get_esg_array(ticker):
-    df = get_esg(ticker)
+def get_esg_risk_array(ticker):
+    df = get_esg_risk(ticker)
     if df is None:
         return [None]
-    return np.array(get_esg(ticker).loc['Value'])
+    return np.array(get_esg_risk(ticker).loc['Value'])
 
 print("Sustainability (ESG)")
-print(get_esg_array(assetA_ticker))
-print(get_esg_array(assetB_ticker))
+print(get_esg_risk_array(assetA_ticker))
+print(get_esg_risk_array(assetB_ticker))
 
 
 # NOTE that these assets will have dividends and splits accounted for in the historical price
