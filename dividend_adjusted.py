@@ -66,6 +66,8 @@ start = "1980-01-01"
 A_ticker = "AAPL"
 B_ticker = "CLAS-B.ST"
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
+
+# NOTE that these assets will have dividends and splits accounted for in the historical price
 assetA = yf.Ticker(A_ticker).history(start=start)["Close"].fillna(method="ffill")
 assetB = yf.Ticker(B_ticker).history(start=start)["Close"].fillna(method="ffill")
 raw_A = assetA
