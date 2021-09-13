@@ -1,3 +1,4 @@
+from pandas.core.frame import DataFrame
 import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,18 +64,42 @@ def dividend_adjusted_history(ticker_name):
     return hist
 
 start = "1980-01-01"
-A_ticker = "AAPL"
-B_ticker = "CLAS-B.ST"
+A_ticker_name = "AAPL"
+B_ticker_name = "CLAS-B.ST"
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
 
+assetA_ticker = yf.Ticker(A_ticker_name)
+assetB_ticker = yf.Ticker(B_ticker_name)
+
+# Returns the environment, social and governance score, like on yahoo finance
+def get_esg(ticker):
+    data_points = ["environmentScore", "socialScore", "governanceScore"]
+    data = ticker.sustainability
+    try:
+        return data.loc[data_points].transpose()
+    except:
+        #print('Could not get ESG score for ' + ticker.ticker)
+        return None
+
+def get_esg_array(ticker):
+    df = get_esg(ticker)
+    if df is None:
+        return [None]
+    return np.array(get_esg(ticker).loc['Value'])
+
+print("Sustainability (ESG)")
+print(get_esg_array(assetA_ticker))
+print(get_esg_array(assetB_ticker))
+
+
 # NOTE that these assets will have dividends and splits accounted for in the historical price
-assetA = yf.Ticker(A_ticker).history(start=start)["Close"].fillna(method="ffill")
-assetB = yf.Ticker(B_ticker).history(start=start)["Close"].fillna(method="ffill")
-raw_A = assetA
+assetA_close = assetA_ticker.history(start=start)["Close"].fillna(method="ffill")
+assetB_close = assetB_ticker.history(start=start)["Close"].fillna(method="ffill")
+raw_A = assetA_close
 
 # Normalize so that all start at 1
-assetA /= float(assetA[:1])
-assetB /= float(assetB[:1])
+assetA_close /= float(assetA_close[:1])
+assetB_close /= float(assetB_close[:1])
 GSPC /= float(GSPC[:1])
 
 
@@ -116,20 +141,20 @@ def get_exp_cagr_and_vol(input_series):
 
 # print some data about the assets
 print("CAGR")
-print(get_exp_cagr_and_vol(assetA)[0])
-print(get_exp_cagr_and_vol(assetB)[0])
+print(get_exp_cagr_and_vol(assetA_close)[0])
+print(get_exp_cagr_and_vol(assetB_close)[0])
 print("VOLATILITY")
-print(get_exp_cagr_and_vol(assetA)[1])
-print(get_exp_cagr_and_vol(assetB)[1])
+print(get_exp_cagr_and_vol(assetA_close)[1])
+print(get_exp_cagr_and_vol(assetB_close)[1])
 
 
 fig, ax = plt.subplots()
-ax.plot(assetA, label=A_ticker)
-ax.plot(assetB, label=B_ticker)
+ax.plot(assetA_close, label=A_ticker_name)
+ax.plot(assetB_close, label=B_ticker_name)
 ax.plot(GSPC, label="GSPC")
 ax.plot(exp_reg_curve(GSPC))
-ax.plot(exp_reg_curve(assetA))
-ax.plot(exp_reg_curve(assetB))
+ax.plot(exp_reg_curve(assetA_close))
+ax.plot(exp_reg_curve(assetB_close))
 ax.legend()
 
 ax.set(xlabel='Date', ylabel='Index',
