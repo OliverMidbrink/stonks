@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import time
 import pandas as pd
 import math
+import yesg
+
+#pip install yesg
+#pip install yfinance
 
 # Show stock price adjusted for dividend
 
@@ -25,6 +29,9 @@ OMXS30_hist['ma_high_low'] = OMXS30_hist['avg_high_low'].rolling(window=253).mea
 
 print(OMXS30_hist['avg_high_low'])
 """
+def get_full_esg(ticker_name):
+    return yesg.get_esg_full(ticker_name)
+
 
 def dividend_adjusted_history(ticker_name):
     ticker = yf.Ticker(ticker_name)
@@ -55,18 +62,17 @@ def dividend_adjusted_history(ticker_name):
 
     return hist
 
-
 start = "1980-01-01"
-A_ticker = "VOLV-B.ST"
-B_ticker = "TELIA.ST"
+A_ticker = "AAPL"
+B_ticker = "CLAS-B.ST"
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
-auto_adjustA = yf.Ticker(A_ticker).history(start=start)["Close"].fillna(method="ffill")
-auto_adjustB = yf.Ticker(B_ticker).history(start=start)["Close"].fillna(method="ffill")
-raw_A = auto_adjustA
+assetA = yf.Ticker(A_ticker).history(start=start)["Close"].fillna(method="ffill")
+assetB = yf.Ticker(B_ticker).history(start=start)["Close"].fillna(method="ffill")
+raw_A = assetA
 
 # Normalize so that all start at 1
-auto_adjustA /= float(auto_adjustA[:1])
-auto_adjustB /= float(auto_adjustB[:1])
+assetA /= float(assetA[:1])
+assetB /= float(assetB[:1])
 GSPC /= float(GSPC[:1])
 
 
@@ -95,7 +101,7 @@ def get_exp_cagr_and_vol(input_series):
     reg_vals = np.polyfit(range(len(input_series.index)), np.log(input_series), 1, w=np.sqrt(input_series))
 
     # get growth rate from exp model
-    cagr = np.exp(reg_vals[0]) ** 253
+    cagr = np.exp(reg_vals[0]) ** 253 - 1
 
     # get volatility compared to market volatility (S&P500) during the period of the input_series
     market_series = yf.Ticker("^GSPC").history(start=input_series.index[0], end=input_series.index[-1])["Close"].fillna(method="ffill")
@@ -108,19 +114,20 @@ def get_exp_cagr_and_vol(input_series):
 
 # print some data about the assets
 print("CAGR")
-print(get_exp_cagr_and_vol(auto_adjustA)[0])
-print(get_exp_cagr_and_vol(auto_adjustB)[0])
+print(get_exp_cagr_and_vol(assetA)[0])
+print(get_exp_cagr_and_vol(assetB)[0])
 print("VOLATILITY")
-print(get_exp_cagr_and_vol(auto_adjustA)[1])
-print(get_exp_cagr_and_vol(auto_adjustB)[1])
+print(get_exp_cagr_and_vol(assetA)[1])
+print(get_exp_cagr_and_vol(assetB)[1])
 
 
 fig, ax = plt.subplots()
-ax.plot(auto_adjustA, label=A_ticker)
-ax.plot(auto_adjustB, label=B_ticker)
+ax.plot(assetA, label=A_ticker)
+ax.plot(assetB, label=B_ticker)
 ax.plot(GSPC, label="GSPC")
-ax.plot(exp_reg_curve(auto_adjustA))
-ax.plot(exp_reg_curve(auto_adjustB))
+ax.plot(exp_reg_curve(GSPC))
+ax.plot(exp_reg_curve(assetA))
+ax.plot(exp_reg_curve(assetB))
 ax.legend()
 
 ax.set(xlabel='Date', ylabel='Index',
