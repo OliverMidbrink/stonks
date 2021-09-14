@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 import time
 import pandas as pd
 import math
-import yesg
-
-#pip install yesg
-#pip install yfinance
 
 # Show stock price adjusted for dividend
 
