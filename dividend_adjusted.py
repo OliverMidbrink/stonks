@@ -6,99 +6,11 @@ import time
 import pandas as pd
 import math
 
-# Show stock price adjusted for dividend
 
-"""
-GSPC = yf.Ticker("^GSPC")
-GSPC_hist = GSPC.history(period="max")
-GSPC_hist['avg_high_low'] = GSPC_hist[["High", "Low"]].mean(axis=1)
-GSPC_hist['ma_high_low'] = GSPC_hist['avg_high_low'].rolling(window=253).mean()
-
-DJI = yf.Ticker("^DJI")
-DJI_hist = DJI.history(start="1992-03-01")
-DJI_hist['avg_high_low'] = DJI_hist[["High", "Low"]].mean(axis=1)
-DJI_hist['ma_high_low'] = DJI_hist['avg_high_low'].rolling(window=253).mean()
-
-OMXS30 = yf.Ticker("^OMXS30")
-OMXS30_hist = OMXS30.history(start="1980-01-01", end="2100-01-01")
-OMXS30_hist['avg_high_low'] = OMXS30_hist[["High", "Low"]].mean(axis=1)
-OMXS30_hist['ma_high_low'] = OMXS30_hist['avg_high_low'].rolling(window=253).mean()
-
-print(OMXS30_hist['avg_high_low'])
-"""
-def get_full_esg(ticker_name):
-    return yesg.get_esg_full(ticker_name)
+###  ===================================== FUNCTIONS =========================================
 
 
-def dividend_adjusted_history(ticker_name):
-    ticker = yf.Ticker(ticker_name)
-
-    dividends = ticker.dividends
-    
-
-    hist = ticker.history(period="5y", auto_adjust=False)
-    hist['avg_high_low'] = hist[["High", "Low"]].mean(axis=1)
-
-    pct_change = hist["avg_high_low"].pct_change()
-    hist['adj_price'] = hist['avg_high_low']
-    
-    start_time = time.time()
-
-    # Iterate all available stock market days, start at 1 since 0 will be used as index. Index start is 1
-    for date_idx in range(1, hist.shape[0], 1):
-        new_adj_price = (pct_change.iloc[date_idx] + 1) * (hist.iloc[date_idx - 1]['adj_price'] + hist.iloc[date_idx - 1]['Dividends'])
-        hist['adj_price'][date_idx] = new_adj_price
-
-    print(hist)
-    print(ticker.splits)
-    print(ticker.dividends)
-    price_development = hist.iloc[-1]['avg_high_low']/hist.iloc[0]['avg_high_low']
-    print(price_development)
-    print(hist.iloc[-1]['adj_price']/price_development)
-    print("Calculation took: " + str(time.time() - start_time) + " seconds")
-
-    return hist
-
-start = "1980-01-01"
-A_ticker_name = "AAPL"
-B_ticker_name = "CLAS-B.ST"
-GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
-
-assetA_ticker = yf.Ticker(A_ticker_name)
-assetB_ticker = yf.Ticker(B_ticker_name)
-
-# Returns the environment, social and governance score, like on yahoo finance
-def get_esg_risk(ticker):
-    data_points = ["environmentScore", "socialScore", "governanceScore"]
-    data = ticker.sustainability
-    try:
-        return data.loc[data_points].transpose()
-    except:
-        #print('Could not get ESG score for ' + ticker.ticker)
-        return None
-
-def get_esg_risk_array(ticker):
-    df = get_esg_risk(ticker)
-    if df is None:
-        return [None]
-    return np.array(get_esg_risk(ticker).loc['Value'])
-
-print("Sustainability (ESG)")
-print(get_esg_risk_array(assetA_ticker))
-print(get_esg_risk_array(assetB_ticker))
-
-
-# NOTE that these assets will have dividends and splits accounted for in the historical price
-assetA_close = assetA_ticker.history(start=start)["Close"].fillna(method="ffill")
-assetB_close = assetB_ticker.history(start=start)["Close"].fillna(method="ffill")
-raw_A = assetA_close
-
-# Normalize so that all start at 1
-assetA_close /= float(assetA_close[:1])
-assetB_close /= float(assetB_close[:1])
-GSPC /= float(GSPC[:1])
-
-
+### ____________________________ EXPONENTIAL REGRESSION STUFF _______________________________
 # Takes in normalized time series that starts with 1
 # regression with exponential curve
 def exp_reg_curve(input_series):
@@ -135,27 +47,119 @@ def get_exp_cagr_and_vol(input_series):
 
     return [cagr, volatility]
 
+
+### ___________________________________________ ESG _____________________________________________________
+# Returns the environment, social and governance score, like on yahoo finance
+def get_esg_risk(ticker):
+    data_points = ["environmentScore", "socialScore", "governanceScore"]
+    data = ticker.sustainability
+    try:
+        return data.loc[data_points].transpose()
+    except:
+        #print('Could not get ESG score for ' + ticker.ticker)
+        return None
+
+def get_esg_risk_array(ticker):
+    df = get_esg_risk(ticker)
+    if df is None:
+        return [None]
+    return np.array(get_esg_risk(ticker).loc['Value'])
+
+### ________________________________________ Ticker ______________________________________________
+# returns a series with aggregated dividends for each year in the format that year-01-01 will contain the sum of 
+# dividends for that year
+def get_aggregated_dividends_per_year(ticker):
+    dividends = ticker.dividends
+
+    agg_divs = dividends.groupby(dividends.index.year).sum()
+    agg_divs.index = pd.to_datetime(agg_divs.index, format="%Y")
+    return agg_divs
+
+# returns dividend_yield for each year of dividend, date will be year-01-01, dividend is all dividend for the year
+# and will be divided by the mean close price during that year 
+def get_dividend_yield_per_year(ticker):
+    agg_divs = get_aggregated_dividends_per_year(ticker)
+
+    close = ticker.history(period="max")["Close"]
+
+    # get yield for each year by dividing dividend by mean close price that year
+    avg_close = close.groupby(close.index.year).mean()
+    avg_close.index = pd.to_datetime(avg_close.index, format="%Y")
+
+    yield_divs = agg_divs.copy()
+    for i in agg_divs.index:
+        yield_divs[i] /= avg_close[i]
+
+    yield_divs.name = "Div. Yields"
+
+    return yield_divs
+
+#### ======================================= SCRIPTS ==============================================
+
+
+start = "1980-01-01"
+A_ticker_name = "HSBA.L"
+B_ticker_name = "HSBC"
+assetA_ticker = yf.Ticker(A_ticker_name)
+assetB_ticker = yf.Ticker(B_ticker_name)
+GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
+
+# NOTE that these assets will have dividends and splits accounted for in the historical price
+assetA_close = assetA_ticker.history(start=start)["Close"].fillna(method="ffill")
+assetB_close = assetB_ticker.history(start=start)["Close"].fillna(method="ffill")
+
+assetA_close_norm = assetA_close.copy()
+assetB_close_norm = assetB_close.copy()
+# Normalize so that all start at 1
+assetA_close_norm /= float(assetA_close[:1])
+assetB_close_norm /= float(assetB_close[:1])
+GSPC /= float(GSPC[:1])
+
+
+agg_divs_A = get_aggregated_dividends_per_year(assetA_ticker)
+agg_divs_A.index = pd.to_datetime(agg_divs_A.index,format="%Y")
+
+agg_divs_B = get_aggregated_dividends_per_year(assetB_ticker)
+agg_divs_B.index = pd.to_datetime(agg_divs_B.index, format="%Y")
+
+print(get_dividend_yield_per_year(assetB_ticker))
+
 # print some data about the assets
 print("CAGR")
-print(get_exp_cagr_and_vol(assetA_close)[0])
-print(get_exp_cagr_and_vol(assetB_close)[0])
+print(get_exp_cagr_and_vol(assetA_close_norm)[0])
+print(get_exp_cagr_and_vol(assetB_close_norm)[0])
 print("VOLATILITY")
-print(get_exp_cagr_and_vol(assetA_close)[1])
-print(get_exp_cagr_and_vol(assetB_close)[1])
+print(get_exp_cagr_and_vol(assetA_close_norm)[1])
+print(get_exp_cagr_and_vol(assetB_close_norm)[1])
+#print("Sustainability (ESG Risk)")
+#print(get_esg_risk_array(assetA_ticker))
+#print(get_esg_risk_array(assetB_ticker))
 
 
 fig, ax = plt.subplots()
-ax.plot(assetA_close, label=A_ticker_name)
-ax.plot(assetB_close, label=B_ticker_name)
+ax.plot(assetA_close_norm, label=A_ticker_name)
+ax.plot(assetB_close_norm, label=B_ticker_name)
 ax.plot(GSPC, label="GSPC")
 ax.plot(exp_reg_curve(GSPC))
-ax.plot(exp_reg_curve(assetA_close))
-ax.plot(exp_reg_curve(assetB_close))
+ax.plot(exp_reg_curve(assetA_close_norm))
+ax.plot(exp_reg_curve(assetB_close_norm))
 ax.legend()
 
 ax.set(xlabel='Date', ylabel='Index',
        title='Stock Market Overview')
 ax.grid()
+
+fig2, ax2 = plt.subplots()
+ax2.plot(get_dividend_yield_per_year(assetA_ticker) * 100, label="Yield (%) " + A_ticker_name)
+ax2.plot(get_dividend_yield_per_year(assetB_ticker) * 100, label="Yield (%) " + B_ticker_name)
+ax2.plot(get_aggregated_dividends_per_year(assetA_ticker), label="Dividends " + A_ticker_name)
+ax2.plot(get_aggregated_dividends_per_year(assetB_ticker), label="Dividends " + B_ticker_name)
+ax2.legend()
+
+
+ax2.set(xlabel='Date', ylabel='Value',
+       title='Dividend Overview')
+ax2.grid()
 
 #plt.yscale('log')
 plt.show()
