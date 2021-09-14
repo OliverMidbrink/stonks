@@ -122,8 +122,6 @@ agg_divs_A.index = pd.to_datetime(agg_divs_A.index,format="%Y")
 agg_divs_B = get_aggregated_dividends_per_year(assetB_ticker)
 agg_divs_B.index = pd.to_datetime(agg_divs_B.index, format="%Y")
 
-print(get_dividend_yield_per_year(assetB_ticker))
-
 # print some data about the assets
 print("CAGR")
 print(get_exp_cagr_and_vol(assetA_close_norm)[0])
