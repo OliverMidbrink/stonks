@@ -77,7 +77,7 @@ def get_aggregated_dividends_per_year(ticker):
 
 # returns dividend_yield for each year of dividend, date will be year-01-01, dividend is all dividend for the year
 # and will be divided by the mean close price during that year 
-def get_dividend_yield_per_year(ticker):
+def get_dividend_yield_per_year(ticker):    # TODO fix this calculation by dividing each dividend by that specific days close price
     agg_divs = get_aggregated_dividends_per_year(ticker)
 
     close = ticker.history(period="max")["Close"]
@@ -94,19 +94,22 @@ def get_dividend_yield_per_year(ticker):
 
     return yield_divs
 
+def divide_by_mean(df):
+    new_df = df.copy()
+    return new_df / float(new_df.mean())
 #### ======================================= SCRIPTS ==============================================
 
 
 start = "1980-01-01"
-A_ticker_name = "HSBA.L"
-B_ticker_name = "HSBC"
+A_ticker_name = "ick.f"
+B_ticker_name = "1398.HK"
 assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
 
 # NOTE that these assets will have dividends and splits accounted for in the historical price
-assetA_close = assetA_ticker.history(start=start)["Close"].fillna(method="ffill")
-assetB_close = assetB_ticker.history(start=start)["Close"].fillna(method="ffill")
+assetA_close = assetA_ticker.history(start=start)["Close"]
+assetB_close = assetB_ticker.history(start=start)["Close"]
 
 assetA_close_norm = assetA_close.copy()
 assetB_close_norm = assetB_close.copy()
@@ -114,13 +117,6 @@ assetB_close_norm = assetB_close.copy()
 assetA_close_norm /= float(assetA_close[:1])
 assetB_close_norm /= float(assetB_close[:1])
 GSPC /= float(GSPC[:1])
-
-
-agg_divs_A = get_aggregated_dividends_per_year(assetA_ticker)
-agg_divs_A.index = pd.to_datetime(agg_divs_A.index,format="%Y")
-
-agg_divs_B = get_aggregated_dividends_per_year(assetB_ticker)
-agg_divs_B.index = pd.to_datetime(agg_divs_B.index, format="%Y")
 
 # print some data about the assets
 print("CAGR")
@@ -132,6 +128,9 @@ print(get_exp_cagr_and_vol(assetB_close_norm)[1])
 #print("Sustainability (ESG Risk)")
 #print(get_esg_risk_array(assetA_ticker))
 #print(get_esg_risk_array(assetB_ticker))
+print("DIVIDEND")
+print(get_aggregated_dividends_per_year(assetA_ticker).mean())
+print(get_aggregated_dividends_per_year(assetB_ticker).mean())
 
 
 fig, ax = plt.subplots()
@@ -150,8 +149,10 @@ ax.grid()
 fig2, ax2 = plt.subplots()
 ax2.plot(get_dividend_yield_per_year(assetA_ticker) * 100, label="Yield (%) " + A_ticker_name)
 ax2.plot(get_dividend_yield_per_year(assetB_ticker) * 100, label="Yield (%) " + B_ticker_name)
-ax2.plot(get_aggregated_dividends_per_year(assetA_ticker), label="Dividends " + A_ticker_name)
-ax2.plot(get_aggregated_dividends_per_year(assetB_ticker), label="Dividends " + B_ticker_name)
+ax2.plot(divide_by_mean(get_aggregated_dividends_per_year(assetA_ticker)), label="Norm. Div. " + A_ticker_name)
+ax2.plot(divide_by_mean(get_aggregated_dividends_per_year(assetB_ticker)), label="Norm. Div. " + B_ticker_name)
+ax2.plot(get_aggregated_dividends_per_year(assetA_ticker), label="Div. " + A_ticker_name)
+ax2.plot(get_aggregated_dividends_per_year(assetB_ticker), label="Div. " + B_ticker_name)
 ax2.legend()
 
 
