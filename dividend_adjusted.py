@@ -6,6 +6,8 @@ import time
 import pandas as pd
 import math
 
+from yfinance.utils import auto_adjust
+
 
 ###  ===================================== FUNCTIONS =========================================
 
@@ -79,6 +81,17 @@ def get_aggregated_dividends_per_year(ticker):
 # and will be divided by the mean close price during that year 
 def get_dividend_yield_per_year(ticker):    # TODO fix this calculation by dividing each dividend by that specific days close price
     agg_divs = get_aggregated_dividends_per_year(ticker)
+    divs = ticker.dividends
+    non_auto_adj_close_prices = ticker.history(start=start, auto_adjust=False)["Close"]
+    non_auto_adj_close_prices_corresponding_to_divs = non_auto_adj_close_prices[divs.index]
+
+    yields = divs / non_auto_adj_close_prices_corresponding_to_divs
+
+    yields = yields.groupby(yields.index.year).sum()
+    yields.index = pd.to_datetime(yields.index, format="%Y")
+
+
+    ## Old method
 
     close = ticker.history(period="max")["Close"]
 
@@ -91,8 +104,8 @@ def get_dividend_yield_per_year(ticker):    # TODO fix this calculation by divid
         yield_divs[i] /= avg_close[i]
 
     yield_divs.name = "Div. Yields"
-
-    return yield_divs
+    yields.name = "Div. Yields"
+    return yields
 
 def divide_by_mean(df):
     new_df = df.copy()
@@ -101,8 +114,8 @@ def divide_by_mean(df):
 
 
 start = "1980-01-01"
-A_ticker_name = "ick.f"
-B_ticker_name = "1398.HK"
+A_ticker_name = "MDLZ"
+B_ticker_name = "1398.hk"
 assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
