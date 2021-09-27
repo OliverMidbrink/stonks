@@ -79,7 +79,7 @@ def get_aggregated_dividends_per_year(ticker):
 
 # returns dividend_yield for each year of dividend, date will be year-01-01, dividend is all dividend for the year
 # and will be divided by the mean close price during that year 
-def get_dividend_yield_per_year(ticker):    # TODO fix this calculation by dividing each dividend by that specific days close price
+def get_dividend_yield_per_year(ticker):
     agg_divs = get_aggregated_dividends_per_year(ticker)
     divs = ticker.dividends
     non_auto_adj_close_prices = ticker.history(start=start, auto_adjust=False)["Close"]
@@ -114,7 +114,7 @@ def divide_by_mean(df):
 
 
 start = "1980-01-01"
-A_ticker_name = "MDLZ"
+A_ticker_name = "ICK.F"
 B_ticker_name = "1398.hk"
 assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
@@ -146,6 +146,10 @@ print(get_aggregated_dividends_per_year(assetA_ticker).mean())
 print(get_aggregated_dividends_per_year(assetB_ticker).mean())
 
 
+# Fiancial statements TODO, make functions for calculating EV over time as well as EBIT in order to calculate EBIT/EV
+print(assetA_ticker.cashflow)
+print(assetA_ticker.financials.transpose()['Net Income Applicable To Common Shares'])
+
 fig, ax = plt.subplots()
 ax.plot(assetA_close_norm, label=A_ticker_name)
 ax.plot(assetB_close_norm, label=B_ticker_name)
@@ -174,4 +178,4 @@ ax2.set(xlabel='Date', ylabel='Value',
 ax2.grid()
 
 #plt.yscale('log')
-plt.show()
+#plt.show()
