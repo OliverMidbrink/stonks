@@ -114,7 +114,7 @@ def divide_by_mean(df):
 
 
 start = "1980-01-01"
-A_ticker_name = "ICK.F"
+A_ticker_name = "TCEHY"
 B_ticker_name = "1398.hk"
 assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
@@ -163,6 +163,8 @@ ax.set(xlabel='Date', ylabel='Index',
        title='Stock Market Overview')
 ax.grid()
 
+plt.yscale('log')
+
 fig2, ax2 = plt.subplots()
 ax2.plot(get_dividend_yield_per_year(assetA_ticker) * 100, label="Yield (%) " + A_ticker_name)
 ax2.plot(get_dividend_yield_per_year(assetB_ticker) * 100, label="Yield (%) " + B_ticker_name)
@@ -177,5 +179,4 @@ ax2.set(xlabel='Date', ylabel='Value',
        title='Dividend Overview')
 ax2.grid()
 
-#plt.yscale('log')
-#plt.show()
+plt.show()
