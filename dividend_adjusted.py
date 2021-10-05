@@ -115,10 +115,13 @@ def divide_by_mean(df):
 
 start = "1980-01-01"
 A_ticker_name = "TCEHY"
-B_ticker_name = "1398.hk"
+B_ticker_name = "0700.HK"
 assetA_ticker = yf.Ticker(A_ticker_name)
 assetB_ticker = yf.Ticker(B_ticker_name)
 GSPC = yf.Ticker("^GSPC").history(start=start, end="2100-01-01")["Close"].fillna(method="ffill")
+
+#print(assetA_ticker.get_isin())
+#print(assetB_ticker.info)
 
 # NOTE that these assets will have dividends and splits accounted for in the historical price
 assetA_close = assetA_ticker.history(start=start)["Close"]
@@ -150,21 +153,7 @@ print(get_aggregated_dividends_per_year(assetB_ticker).mean())
 print(assetA_ticker.cashflow)
 print(assetA_ticker.financials.transpose()['Net Income Applicable To Common Shares'])
 
-fig, ax = plt.subplots()
-ax.plot(assetA_close_norm, label=A_ticker_name)
-ax.plot(assetB_close_norm, label=B_ticker_name)
-ax.plot(GSPC, label="GSPC")
-ax.plot(exp_reg_curve(GSPC))
-ax.plot(exp_reg_curve(assetA_close_norm))
-ax.plot(exp_reg_curve(assetB_close_norm))
-ax.legend()
-
-ax.set(xlabel='Date', ylabel='Index',
-       title='Stock Market Overview')
-ax.grid()
-
-plt.yscale('log')
-
+# Plot Dividend overview
 fig2, ax2 = plt.subplots()
 ax2.plot(get_dividend_yield_per_year(assetA_ticker) * 100, label="Yield (%) " + A_ticker_name)
 ax2.plot(get_dividend_yield_per_year(assetB_ticker) * 100, label="Yield (%) " + B_ticker_name)
@@ -179,4 +168,20 @@ ax2.set(xlabel='Date', ylabel='Value',
        title='Dividend Overview')
 ax2.grid()
 
+
+# Plot Total shareholder return overview
+fig, ax = plt.subplots()
+ax.plot(assetA_close_norm, label=A_ticker_name)
+ax.plot(assetB_close_norm, label=B_ticker_name)
+ax.plot(GSPC, label="GSPC")
+ax.plot(exp_reg_curve(GSPC))
+ax.plot(exp_reg_curve(assetA_close_norm))
+ax.plot(exp_reg_curve(assetB_close_norm))
+ax.legend()
+
+ax.set(xlabel='Date', ylabel='Index',
+       title='Stock Market Overview')
+ax.grid()
+
+#plt.yscale('log')
 plt.show()
